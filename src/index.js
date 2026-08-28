@@ -30,6 +30,16 @@ async function main() {
     return { video, iso };
   }
 
+  // Sin llaves de publicación no es un error: el video ya está hecho y
+  // se puede subir a mano. Avisamos y terminamos bien.
+  if (!cfg.uploadPostKey || !cfg.uploadPostUser) {
+    log('ℹ️  Sin llaves de Upload-Post: el video quedó listo pero NO se publicó.');
+    log('   Para automatizar la publicación, agrega UPLOADPOST_API_KEY y');
+    log('   UPLOADPOST_USER a los Secrets del repositorio.');
+    console.log('\n--- Texto para publicar a mano ---\n' + texto + '\n');
+    return { video, iso };
+  }
+
   await publicarEnTikTok(video, texto);
   log('🎉 Terminado.');
   return { video, iso };
