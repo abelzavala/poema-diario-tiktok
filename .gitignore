@@ -1,0 +1,6 @@
+node_modules/
+.env
+salidas/*.mp4
+salidas/*.png
+!salidas/.gitkeep
+*.log

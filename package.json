@@ -1,0 +1,16 @@
+{
+  "name": "poema-diario-tiktok",
+  "version": "1.0.0",
+  "description": "Genera y publica en TikTok un video diario de un libro abriéndose con un poema del día",
+  "type": "module",
+  "main": "src/index.js",
+  "scripts": {
+    "start": "node src/index.js",
+    "prueba": "node src/index.js --dry-run",
+    "master": "node scripts/generar-master.js",
+    "master:local": "bash scripts/master-fallback.sh",
+    "musica": "node scripts/generar-musica.js"
+  },
+  "engines": { "node": ">=20" },
+  "dependencies": {}
+}

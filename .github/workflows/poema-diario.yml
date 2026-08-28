@@ -1,0 +1,64 @@
+name: Poema del día → TikTok
+
+on:
+  schedule:
+    # 15:00 UTC = 9:00 AM en Ciudad de México (UTC-6, horario estándar)
+    # ⚠️ México ya no aplica horario de verano, así que 15:00 UTC es 9am todo el año.
+    - cron: '0 15 * * *'
+  workflow_dispatch:        # botón para lanzarlo a mano desde la pestaña Actions
+    inputs:
+      solo_probar:
+        description: 'Generar el video pero NO publicarlo'
+        type: boolean
+        default: false
+
+permissions:
+  contents: write
+
+jobs:
+  publicar:
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+
+    steps:
+      - name: Descargar el repositorio
+        uses: actions/checkout@v4
+
+      - name: Instalar ffmpeg
+        run: |
+          sudo apt-get update -qq
+          sudo apt-get install -y -qq ffmpeg
+          ffmpeg -version | head -1
+
+      - name: Instalar Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+
+      - name: Generar y publicar
+        env:
+          GEMINI_API_KEY:     ${{ secrets.GEMINI_API_KEY }}
+          ANTHROPIC_API_KEY:  ${{ secrets.ANTHROPIC_API_KEY }}
+          UPLOADPOST_API_KEY: ${{ secrets.UPLOADPOST_API_KEY }}
+          UPLOADPOST_USER:    ${{ secrets.UPLOADPOST_USER }}
+          ZONA_HORARIA:       America/Mexico_City
+          PUBLICAR:           ${{ inputs.solo_probar == true && 'false' || 'true' }}
+        run: node src/index.js
+
+      - name: Guardar el video como artefacto
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: video-del-dia
+          path: salidas/*.mp4
+          retention-days: 14
+          if-no-files-found: warn
+
+      - name: Guardar el historial de poemas
+        if: success()
+        run: |
+          git config user.name  "poema-bot"
+          git config user.email "bot@users.noreply.github.com"
+          git add datos/historial.json
+          git diff --staged --quiet || git commit -m "Poema del $(date -u +%Y-%m-%d)"
+          git push

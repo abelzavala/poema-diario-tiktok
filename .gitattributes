@@ -1,0 +1,22 @@
+# Normaliza los finales de línea para que el proyecto funcione igual en
+# Windows (tu máquina) y en Linux (GitHub Actions).
+
+* text=auto
+
+# Estos SIEMPRE con finales de línea de Linux: si llevan CRLF, fallan en el
+# servidor con errores que no dicen nada útil.
+*.sh        text eol=lf
+*.yml       text eol=lf
+*.yaml      text eol=lf
+*.js        text eol=lf
+*.json      text eol=lf
+*.md        text eol=lf
+.gitignore  text eol=lf
+.env.example text eol=lf
+
+# Binarios: que Git no los toque nunca.
+*.mp4  binary
+*.mp3  binary
+*.png  binary
+*.jpg  binary
+*.ttf  binary
