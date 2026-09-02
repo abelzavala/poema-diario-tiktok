@@ -1,13 +1,15 @@
 #!/usr/bin/env node
 /**
- * Pipeline diario: poema → video → TikTok
- * Uso:  node src/index.js            (genera y publica)
- *       node src/index.js --dry-run  (genera pero NO publica)
+ * Pipeline diario: poema → video → TikTok → registro en Supabase
+ *
+ *   node src/index.js            genera y publica
+ *   node src/index.js --dry-run  genera pero NO publica
  */
 import { cfg, log, hoy } from './config.js';
 import { generarPoema } from './poema.js';
 import { renderizar } from './render.js';
-import { publicarEnTikTok, caption } from './publicar.js';
+import { publicarEnTikTok, caption, hashtagsDe } from './publicar.js';
+import { registrarPoema, marcarPublicado, marcarFallido } from './supabase.js';
 
 const seco = process.argv.includes('--dry-run') || !cfg.publicar;
 
@@ -15,24 +17,41 @@ async function main() {
   const { iso, largo } = hoy();
   log(`━━━ Poema del día · ${largo} ━━━`);
 
+  // 1) El poema
   log('✍️  Pidiendo el poema del día…');
   const poema = await generarPoema();
   console.log('\n' + poema.versos.map(v => '   ' + v).join('\n') + '\n');
   log(`   (tema: ${poema.tema})`);
 
+  // 2) El video
   const video = await renderizar(poema);
 
-  const texto = caption(poema, largo);
+  // 3) El texto de la publicación
+  const hashtags = hashtagsDe();
+  const texto = caption(poema, largo, hashtags);
 
+  // 4) Registro en Supabase — antes de publicar, para que quede
+  //    constancia incluso si la publicación falla
+  const sinPublicar = seco || !cfg.uploadPostKey || !cfg.uploadPostUser;
+  await registrarPoema({
+    fecha: iso,
+    poema: poema.versos.join('\n'),
+    versos: poema.versos,
+    tema: poema.tema,
+    modelo: poema.modelo,
+    caption: texto,
+    hashtags,
+    estado: seco ? 'prueba' : 'pendiente',
+  });
+
+  // 5) Publicación
   if (seco) {
     log('🧪 Modo prueba: NO se publica. El video quedó en la carpeta "salidas".');
     console.log('\n--- Texto que se publicaría ---\n' + texto + '\n');
     return { video, iso };
   }
 
-  // Sin llaves de publicación no es un error: el video ya está hecho y
-  // se puede subir a mano. Avisamos y terminamos bien.
-  if (!cfg.uploadPostKey || !cfg.uploadPostUser) {
+  if (sinPublicar) {
     log('ℹ️  Sin llaves de Upload-Post: el video quedó listo pero NO se publicó.');
     log('   Para automatizar la publicación, agrega UPLOADPOST_API_KEY y');
     log('   UPLOADPOST_USER a los Secrets del repositorio.');
@@ -40,8 +59,19 @@ async function main() {
     return { video, iso };
   }
 
-  await publicarEnTikTok(video, texto);
-  log('🎉 Terminado.');
+  try {
+    const r = await publicarEnTikTok(video, texto);
+    await marcarPublicado(iso, {
+      tiktok_url:     r?.tiktok_url || r?.url || r?.results?.tiktok?.url || null,
+      tiktok_post_id: r?.post_id || r?.results?.tiktok?.post_id || null,
+      request_id:     r?.request_id || null,
+    });
+    log('🎉 Terminado.');
+  } catch (e) {
+    await marcarFallido(iso, e.message);
+    throw e;
+  }
+
   return { video, iso };
 }
 

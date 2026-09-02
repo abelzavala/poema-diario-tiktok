@@ -9,11 +9,15 @@ const HASHTAGS = [
   '#parati', '#fyp', '#inspiracion', '#versos', '#buenosdias',
 ];
 
+/** Elige 6 hashtags al azar del catálogo */
+export function hashtagsDe() {
+  return [...HASHTAGS].sort(() => Math.random() - 0.5).slice(0, 6);
+}
+
 /** Construye el texto que acompaña al video en TikTok */
-export function caption(poema, fechaLarga) {
+export function caption(poema, fechaLarga, hashtags = hashtagsDe()) {
   const cuerpo = poema.versos.join('\n');
-  const tags = [...HASHTAGS].sort(() => Math.random() - 0.5).slice(0, 6).join(' ');
-  let txt = `${cuerpo}\n\n✨ ${fechaLarga.toLowerCase()}\n\n${tags}`;
+  let txt = `${cuerpo}\n\n✨ ${fechaLarga.toLowerCase()}\n\n${hashtags.join(' ')}`;
   if (txt.length > 2100) txt = txt.slice(0, 2100);
   return txt;
 }

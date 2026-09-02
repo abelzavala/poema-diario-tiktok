@@ -41,6 +41,8 @@ jobs:
           ANTHROPIC_API_KEY:  ${{ secrets.ANTHROPIC_API_KEY }}
           UPLOADPOST_API_KEY: ${{ secrets.UPLOADPOST_API_KEY }}
           UPLOADPOST_USER:    ${{ secrets.UPLOADPOST_USER }}
+          SUPABASE_URL:       ${{ secrets.SUPABASE_URL }}
+          SUPABASE_SERVICE_KEY: ${{ secrets.SUPABASE_SERVICE_KEY }}
           ZONA_HORARIA:       America/Mexico_City
           PUBLICAR:           ${{ inputs.solo_probar == true && 'false' || 'true' }}
         run: node src/index.js

@@ -68,9 +68,10 @@ ${historial.slice(-8).map(h => h.versos.join(' / ')).join('\n') || '(ninguno tod
 Responde ÚNICAMENTE con un objeto JSON válido, sin texto adicional ni bloques de código:
 {"versos": ["...", "...", "...", "..."], "titulo_corto": "3 o 4 palabras para el caption"}`;
 
+  const usado = { modelo: null };
   const texto = cfg.anthropicKey
-    ? await pedirAClaude(prompt)
-    : await pedirAGemini(prompt);
+    ? await pedirAClaude(prompt, usado)
+    : await pedirAGemini(prompt, usado);
 
   const json = texto.replace(/^```(?:json)?|```$/gm, '').trim();
 
@@ -90,6 +91,7 @@ Responde ÚNICAMENTE con un objeto JSON válido, sin texto adicional ni bloques 
   if (largo) log(`⚠️  Verso largo (${largo.length} car.), se reducirá el tamaño de letra: "${largo}"`);
 
   poema.tema = tema;
+  poema.modelo = usado.modelo;
   poema.titulo_corto = poema.titulo_corto || tema;
 
   historial.push({ fecha: new Date().toISOString(), tema, versos: poema.versos });
@@ -99,8 +101,9 @@ Responde ÚNICAMENTE con un objeto JSON válido, sin texto adicional ni bloques 
 }
 
 /** Proveedor A — API de Claude (de pago, ~$0.19 USD/mes) */
-async function pedirAClaude(prompt) {
+async function pedirAClaude(prompt, usado = {}) {
   log(`   usando Claude (${MODELO_CLAUDE})`);
+  usado.modelo = MODELO_CLAUDE;
   const r = await fetch('https://api.anthropic.com/v1/messages', {
     method: 'POST',
     headers: {
@@ -125,12 +128,14 @@ async function pedirAClaude(prompt) {
  * Proveedor B — API de Gemini (nivel gratuito, sin tarjeta)
  * Reintenta ante saturación y cambia de modelo si uno no está disponible.
  */
-async function pedirAGemini(prompt) {
+async function pedirAGemini(prompt, usado = {}) {
   let ultimo;
   for (const modelo of MODELOS_GEMINI) {
     for (let intento = 1; intento <= 3; intento++) {
       try {
-        return await llamarAGemini(prompt, modelo, intento);
+        const r = await llamarAGemini(prompt, modelo, intento);
+        usado.modelo = modelo;
+        return r;
       } catch (e) {
         ultimo = e;
         const codigo = e.codigo ?? 0;

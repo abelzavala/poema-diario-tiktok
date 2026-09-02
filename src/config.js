@@ -24,6 +24,8 @@ export const cfg = {
   uploadPostUser: process.env.UPLOADPOST_USER || '',
   geminiKey:      process.env.GEMINI_API_KEY || '',
   elevenKey:      process.env.ELEVENLABS_API_KEY || '',
+  supabaseUrl:    process.env.SUPABASE_URL || '',
+  supabaseKey:    process.env.SUPABASE_SERVICE_KEY || '',
   zona:           process.env.ZONA_HORARIA || 'America/Mexico_City',
   publicar:       String(process.env.PUBLICAR ?? 'true').toLowerCase() !== 'false',
 
