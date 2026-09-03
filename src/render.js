@@ -67,19 +67,23 @@ export async function renderizar(poema) {
   const SEPIA   = '0x5A452A';                 // sepia más claro para la fecha
   // Sombra sutil en vez de halo: da relieve sin lavar la letra
   const RELIEVE = 'shadowcolor=0x00000038:shadowx=0:shadowy=2';
+  const X_FECHA = 60;                         // margen izquierdo de la fecha
   const y_fecha = Math.round(1920 * 0.325);
   const y_dots  = y_fecha + 54;
   const bloque  = interlinea * poema.versos.length;
   const yInicio = Math.round(1920 * 0.555 - bloque / 2);
 
   const aparece = t => `alpha='if(lt(t,${t}),0,min(1,(t-${t})/${FADE}))'`;
-  const texto = (txt, size, color, y, t, extra = '') =>
+  // x por defecto: centrado. Pasar un número para alinear a la izquierda.
+  const texto = (txt, size, color, y, t, extra = '', x = '(w-tw)/2') =>
     `drawtext=fontfile='${F}':text='${esc(txt)}':fontsize=${size}:fontcolor=${color}` +
-    `:${aparece(t)}:x=(w-tw)/2:y=${y}:${RELIEVE}${extra ? ':' + extra : ''}`;
+    `:${aparece(t)}:x=${x}:y=${y}:${RELIEVE}${extra ? ':' + extra : ''}`;
 
   const filtros = [
-    texto(largo, 34, SEPIA, y_fecha, T_FECHA),                         // fecha
-    texto('·  ·  ·', 30, SEPIA, y_dots, T_FECHA + 0.3),                // ornamento
+    // Fecha y ornamento van en la hoja IZQUIERDA, alineados a la orilla.
+    // Los versos siguen centrados, cruzando el pliegue (variante aprobada).
+    texto(largo, 38, SEPIA, y_fecha, T_FECHA, '', X_FECHA),            // fecha
+    texto('·  ·  ·', 30, SEPIA, y_dots, T_FECHA + 0.3, '', X_FECHA),   // ornamento
     ...poema.versos.map((v, i) =>
       texto(v, fs_poema, TINTA, yInicio + i * interlinea, T_POEMA + i * PASO)),
   ];

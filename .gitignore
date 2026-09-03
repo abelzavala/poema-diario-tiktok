@@ -4,3 +4,5 @@ salidas/*.mp4
 salidas/*.png
 !salidas/.gitkeep
 *.log
+prueba-visual.mjs
+assets/libro_master.BACKUP.mp4
