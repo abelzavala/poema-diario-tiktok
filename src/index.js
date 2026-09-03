@@ -14,7 +14,7 @@ import { registrarPoema, marcarPublicado, marcarFallido } from './supabase.js';
 const seco = process.argv.includes('--dry-run') || !cfg.publicar;
 
 async function main() {
-  const { iso, largo } = hoy();
+  const { iso, hora, largo } = hoy();
   log(`━━━ Poema del día · ${largo} ━━━`);
 
   // 1) El poema
@@ -33,8 +33,9 @@ async function main() {
   // 4) Registro en Supabase — antes de publicar, para que quede
   //    constancia incluso si la publicación falla
   const sinPublicar = seco || !cfg.uploadPostKey || !cfg.uploadPostUser;
-  await registrarPoema({
+  const filaId = await registrarPoema({
     fecha: iso,
+    hora,
     poema: poema.versos.join('\n'),
     versos: poema.versos,
     tema: poema.tema,
@@ -61,14 +62,14 @@ async function main() {
 
   try {
     const r = await publicarEnTikTok(video, texto);
-    await marcarPublicado(iso, {
+    await marcarPublicado(filaId, {
       tiktok_url:     r?.tiktok_url || r?.url || r?.results?.tiktok?.url || null,
       tiktok_post_id: r?.post_id || r?.results?.tiktok?.post_id || null,
       request_id:     r?.request_id || null,
     });
     log('🎉 Terminado.');
   } catch (e) {
-    await marcarFallido(iso, e.message);
+    await marcarFallido(filaId, e.message);
     throw e;
   }
 

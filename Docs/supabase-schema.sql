@@ -7,7 +7,8 @@ create table if not exists public.poemas (
   id            bigint generated always as identity primary key,
 
   -- ── Lo esencial ──────────────────────────────────────────────
-  fecha         date        not null unique,   -- un poema por día
+  fecha         date        not null,          -- día de la generación
+  hora          time,                          -- hora local (America/Mexico_City)
   poema         text        not null,          -- los versos, con saltos de línea
   tiktok_url    text,                          -- se llena al publicar
 
@@ -42,7 +43,7 @@ comment on table public.poemas is 'Registro de cada poema generado y publicado e
 comment on column public.poemas.estado is 'pendiente = generado sin publicar · publicado · fallido · prueba = corrida en modo dry-run';
 
 -- Índices para las consultas que vas a hacer
-create index if not exists poemas_fecha_idx  on public.poemas (fecha desc);
+create index if not exists poemas_fecha_idx  on public.poemas (fecha desc, hora desc);
 create index if not exists poemas_estado_idx on public.poemas (estado);
 
 -- Mantener actualizado_en al día automáticamente
@@ -66,7 +67,7 @@ alter table public.poemas enable row level security;
 
 -- ── Vista de consulta rápida ───────────────────────────────────
 create or replace view public.poemas_recientes as
-  select fecha, tema, poema, estado, tiktok_url, vistas, likes, guardados
+  select fecha, hora, tema, poema, estado, tiktok_url, vistas, likes, guardados
   from public.poemas
-  order by fecha desc
+  order by fecha desc, hora desc
   limit 60;

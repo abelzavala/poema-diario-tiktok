@@ -30,34 +30,43 @@ async function pedir(ruta, opciones = {}) {
 }
 
 /**
- * Guarda (o actualiza, si ya existe ese día) el poema del día.
- * @returns true si quedó registrado
+ * Guarda el poema como una fila NUEVA.
+ *
+ * DISEÑO: cada generación queda registrada por separado, aunque sea del mismo
+ * día. Antes se fusionaba por fecha y una segunda corrida borraba el poema de
+ * la primera — se perdia trabajo sin aviso.
+ *
+ * @returns el id de la fila creada, o null si no se pudo registrar
  */
-export async function registrarPoema({ fecha, poema, tema, versos, modelo, caption, hashtags, estado }) {
-  if (!activo()) return false;
+export async function registrarPoema({ fecha, hora, poema, tema, versos, modelo, caption, hashtags, estado }) {
+  if (!activo()) return null;
   try {
-    await pedir('poemas?on_conflict=fecha', {
+    const filas = await pedir('poemas?select=id', {
       method: 'POST',
-      headers: { Prefer: 'resolution=merge-duplicates,return=minimal' },
+      headers: { Prefer: 'return=representation' },
       body: JSON.stringify([{
-        fecha, poema, tema, versos, modelo, caption, hashtags,
+        fecha, hora, poema, tema, versos, modelo, caption, hashtags,
         estado: estado || 'pendiente',
         error: null,
       }]),
     });
-    log('🗄️  Registrado en Supabase');
-    return true;
+    const id = filas?.[0]?.id ?? null;
+    log(`🗄️  Registrado en Supabase${id ? ` (fila ${id})` : ''}`);
+    return id;
   } catch (e) {
     log(`⚠️  No se pudo registrar en Supabase (el video no se ve afectado): ${e.message}`);
-    return false;
+    return null;
   }
 }
 
-/** Marca el poema del día como publicado y guarda el link */
-export async function marcarPublicado(fecha, { tiktok_url, tiktok_post_id, request_id } = {}) {
-  if (!activo()) return false;
+/**
+ * Marca una fila como publicada y guarda el link.
+ * Se identifica por id, NO por fecha: puede haber varias filas el mismo dia.
+ */
+export async function marcarPublicado(id, { tiktok_url, tiktok_post_id, request_id } = {}) {
+  if (!activo() || !id) return false;
   try {
-    await pedir(`poemas?fecha=eq.${fecha}`, {
+    await pedir(`poemas?id=eq.${id}`, {
       method: 'PATCH',
       headers: { Prefer: 'return=minimal' },
       body: JSON.stringify({
@@ -75,11 +84,11 @@ export async function marcarPublicado(fecha, { tiktok_url, tiktok_post_id, reque
   }
 }
 
-/** Marca el poema del día como fallido, guardando el motivo */
-export async function marcarFallido(fecha, motivo) {
-  if (!activo()) return false;
+/** Marca una fila como fallida, guardando el motivo. Se identifica por id. */
+export async function marcarFallido(id, motivo) {
+  if (!activo() || !id) return false;
   try {
-    await pedir(`poemas?fecha=eq.${fecha}`, {
+    await pedir(`poemas?id=eq.${id}`, {
       method: 'PATCH',
       headers: { Prefer: 'return=minimal' },
       body: JSON.stringify({ estado: 'fallido', error: String(motivo).slice(0, 1000) }),
@@ -93,7 +102,7 @@ export async function ultimosPoemas(cuantos = 10) {
   if (!activo()) return [];
   try {
     const filas = await pedir(
-      `poemas?select=fecha,tema,poema&order=fecha.desc&limit=${cuantos}`);
+      `poemas?select=fecha,hora,tema,poema&order=creado_en.desc&limit=${cuantos}`);
     return filas || [];
   } catch (e) {
     log(`⚠️  No se pudo leer el historial de Supabase: ${e.message}`);
@@ -102,10 +111,10 @@ export async function ultimosPoemas(cuantos = 10) {
 }
 
 /** Permite llenar las métricas a mano o desde otro script */
-export async function guardarMetricas(fecha, { vistas, likes, comentarios, compartidos, guardados }) {
-  if (!activo()) return false;
+export async function guardarMetricas(id, { vistas, likes, comentarios, compartidos, guardados }) {
+  if (!activo() || !id) return false;
   try {
-    await pedir(`poemas?fecha=eq.${fecha}`, {
+    await pedir(`poemas?id=eq.${id}`, {
       method: 'PATCH',
       headers: { Prefer: 'return=minimal' },
       body: JSON.stringify({

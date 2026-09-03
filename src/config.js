@@ -47,5 +47,8 @@ export function hoy() {
   const largo = new Intl.DateTimeFormat('es-MX', {
     timeZone: cfg.zona, day: 'numeric', month: 'long', year: 'numeric',
   }).format(new Date());
-  return { iso: f, largo: largo.toUpperCase() };
+  const hora = new Intl.DateTimeFormat('en-GB', {
+    timeZone: cfg.zona, hour: '2-digit', minute: '2-digit', second: '2-digit', hour12: false,
+  }).format(new Date());                                   // HH:MM:SS
+  return { iso: f, hora, largo: largo.toUpperCase() };
 }
