@@ -98,7 +98,7 @@ export async function renderizar(poema) {
 
   args.push('-filter_complex',
     hayMusica
-      ? `[0:v]${vf}[v];[1:a]volume=0.30,afade=t=in:st=0:d=2.5,` +
+      ? `[0:v]${vf}[v];[1:a]volume=0.85,afade=t=in:st=0:d=2.5,` +
         `afade=t=out:st=${(DUR - 2.5).toFixed(2)}:d=2.5,atrim=0:${DUR}[a]`
       : `[0:v]${vf}[v]`);
 
