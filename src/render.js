@@ -51,7 +51,7 @@ export async function renderizar(poema) {
   const F = escRuta(cfg.rutas.fuente);
 
   // ── Tiempos ───────────────────────────────────────────────
-  const T_PAGINA = Number(process.env.T_PAGINA || 5.4);  // cuándo la hoja llena el cuadro
+  const T_PAGINA = Number(process.env.T_PAGINA || 5.6);  // cuándo la hoja llena el cuadro
   const PASO     = 0.45;                                 // retraso entre verso y verso
   const FADE     = 0.8;
   const T_FECHA  = T_PAGINA;
@@ -67,11 +67,25 @@ export async function renderizar(poema) {
   const SEPIA   = '0x5A452A';                 // sepia más claro para la fecha
   // Sombra sutil en vez de halo: da relieve sin lavar la letra
   const RELIEVE = 'shadowcolor=0x00000038:shadowx=0:shadowy=2';
-  const X_FECHA = 60;                         // margen izquierdo de la fecha
-  const y_fecha = Math.round(1920 * 0.325);
+  const X_FECHA = 90;                         // margen izquierdo de la fecha
+  const y_fecha = Math.round(1920 * 0.315);
   const y_dots  = y_fecha + 54;
   const bloque  = interlinea * poema.versos.length;
-  const yInicio = Math.round(1920 * 0.555 - bloque / 2);
+  const yInicio = Math.round(1920 * 0.520 - bloque / 2);
+
+  // ── Aclarado de la hoja ───────────────────────────────────
+  // La plantilla tiene un manuscrito impreso en las páginas. Sin esto, la
+  // escritura de fondo compite con los versos y unos se leen y otros no,
+  // según dónde caigan. Un velo color pergamino atenúa esa escritura solo
+  // donde va el poema, con degradado en los cuatro bordes para que no se
+  // vea el parche: la textura del papel se conserva.
+  const WASH_Y = Math.round(1920 * 0.275);
+  const WASH_H = 900;
+  const velo =
+    `color=c=0xF0E3C8:s=1080x${WASH_H}:d=${DUR},format=rgba,` +
+    `geq=r='r(X,Y)':g='g(X,Y)':b='b(X,Y)':` +
+    `a='160*pow(sin(PI*Y/H)\,0.8)*pow(sin(PI*X/W)\,0.35)',` +
+    `fade=t=in:st=${T_PAGINA}:d=0.8:alpha=1[velo]`;
 
   const aparece = t => `alpha='if(lt(t,${t}),0,min(1,(t-${t})/${FADE}))'`;
   // x por defecto: centrado. Pasar un número para alinear a la izquierda.
@@ -96,11 +110,13 @@ export async function renderizar(poema) {
   const args = ['-hide_banner', '-loglevel', 'error', '-y', '-i', cfg.rutas.master];
   if (hayMusica) args.push('-stream_loop', '-1', '-i', cfg.rutas.musica);
 
+  const base = `${velo};[0:v][velo]overlay=0:${WASH_Y}[hoja];[hoja]${vf}[v]`;
+
   args.push('-filter_complex',
     hayMusica
-      ? `[0:v]${vf}[v];[1:a]volume=0.85,afade=t=in:st=0:d=2.5,` +
+      ? `${base};[1:a]volume=0.85,afade=t=in:st=0:d=2.5,` +
         `afade=t=out:st=${(DUR - 2.5).toFixed(2)}:d=2.5,atrim=0:${DUR}[a]`
-      : `[0:v]${vf}[v]`);
+      : base);
 
   args.push('-map', '[v]');
   if (hayMusica) args.push('-map', '[a]', '-c:a', 'aac', '-b:a', '192k', '-ar', '44100');
